@@ -5,7 +5,9 @@
   "description": "Dynamic Island-style overlay for work data",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "setup-hooks": "node scripts/setup-hooks.js",
+    "remove-hooks": "node scripts/setup-hooks.js --uninstall"
   },
   "devDependencies": {
     "electron": "^45.1.0"
