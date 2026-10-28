@@ -9,6 +9,7 @@ const HOVER_INTENT_MS = 120;
 const COLLAPSE_DELAY_MS = 350;
 const ATTENTION_MS = 4000;
 const WHEEL_THROTTLE_MS = 300;
+const DOTS_H = 14;
 
 const island = document.getElementById('island');
 const compactLayer = document.getElementById('compact');
@@ -65,18 +66,34 @@ function render() {
   const state = expanded ? 'expanded' : view.mod.hasActivity() ? 'compact' : 'idle';
   const size = SIZES[state];
 
-  island.dataset.state = state;
-  island.style.width = `${size.w}px`;
-  island.style.height = `${state === 'expanded' ? view.mod.expandedHeight ?? 160 : size.h}px`;
-  island.style.borderRadius = `${size.r}px`;
-
+  // Dots only for modules that have something to show.
+  let shown = 0;
   views.forEach((v, i) => {
     const on = i === idx;
     v.ears.hidden = !on;
     v.body.hidden = !on;
     v.dot.classList.toggle('active', on);
+    v.dot.hidden = !on && !v.mod.hasActivity();
+    if (!v.dot.hidden) shown++;
   });
-  dots.hidden = views.length < 2;
+  dots.hidden = shown < 2;
+
+  // expandedHeight includes room for the dots; give it back when they're hidden.
+  const expandedH = (view.mod.expandedHeight ?? 160) - (dots.hidden ? DOTS_H : 0);
+  island.dataset.state = state;
+  island.style.width = `${size.w}px`;
+  island.style.height = `${state === 'expanded' ? expandedH : size.h}px`;
+  island.style.borderRadius = `${size.r}px`;
+}
+
+// Next module with activity in direction dir (±1), or the current one.
+function step(dir) {
+  const from = currentIndex();
+  for (let k = 1; k < views.length; k++) {
+    const i = (from + dir * k + views.length * k) % views.length;
+    if (views[i].mod.hasActivity()) return i;
+  }
+  return from;
 }
 
 function setExpanded(value) {
@@ -141,7 +158,7 @@ island.addEventListener('wheel', (e) => {
   const now = Date.now();
   if (now - lastWheel < WHEEL_THROTTLE_MS || views.length < 2) return;
   lastWheel = now;
-  activate(currentIndex() + Math.sign(e.deltaY || e.deltaX));
+  activate(step(Math.sign(e.deltaY || e.deltaX) || 1));
 }, { passive: true });
 
 island.addEventListener('animationend', () => island.classList.remove('pulse'));

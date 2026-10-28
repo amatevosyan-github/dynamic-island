@@ -53,11 +53,16 @@ function render() {
     const s = STATE[a.state];
     const t = TOOL[a.tool] || { letter: '?', name: a.tool, color: 'var(--fg-3)' };
     const row = document.createElement(a.openUrl ? 'button' : 'div');
-    row.className = 'row agent';
+    row.className = a.openUrl ? 'row agent link' : 'row agent';
     if (a.openUrl) {
-      row.title = `Open in ${t.name}`;
+      row.title = `Open in ${t.name} · right-click for more`;
       row.addEventListener('click', () => window.island.open(a.openUrl));
     }
+    row.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation(); // not the island's own menu
+      window.island.command('agents', 'menu', { key: a.key });
+    });
     row.innerHTML = `
       <div class="agent-tool" style="--t:${t.color}"></div>
       <div class="row-main">
@@ -67,7 +72,7 @@ function render() {
       <div class="status-pill ${a.state}" style="--c:${s.color}">
         <span class="status-dot"></span>${s.label}
       </div>
-      <div class="agent-age">${age(a.updatedAt)}</div>`;
+      <div class="agent-age" title="Time in this state">${age(a.since)}</div>`;
     const badge = row.querySelector('.agent-tool');
     badge.textContent = t.letter;
     badge.title = t.name;
@@ -106,7 +111,7 @@ export default {
     loaded = true;
     lastState.clear();
     for (const a of data) lastState.set(a.session, a.state);
-    list = data;
+    list = data.filter((a) => STATE[a.state]);
     render();
     ctx.changed({ attention });
   },

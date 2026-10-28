@@ -1,5 +1,4 @@
-// Fake pipeline feed so the module has something to render.
-// Swap for a real GitLab poller with the same { id, start(emit) } shape.
+// Fake pipeline feed for UI work; enable it in providers/index.js instead of gitlab.js.
 const CYCLE = ['pending', 'running', 'running', 'success', 'failed'];
 
 module.exports = {
@@ -11,7 +10,7 @@ module.exports = {
       { project: 'vistry-utils', ref: 'feat/island', step: 0 },
     ];
 
-    const send = () => emit(pipelines.map((p) => ({ project: p.project, ref: p.ref, status: CYCLE[p.step] })));
+    const send = () => emit(pipelines.map((p) => ({ id: p.project, project: p.project, ref: p.ref, status: CYCLE[p.step] })));
     const tick = () => {
       const p = pipelines[Math.floor(Math.random() * pipelines.length)];
       p.step = (p.step + 1) % CYCLE.length;

@@ -331,11 +331,9 @@ button {
   text-overflow: ellipsis;
 }
 
-/* ---------- agents module ---------- */
-
-.row.agent {
+/* Clickable rows bleed into the padding so the hover fill has room around the text. */
+.row.link {
   width: calc(100% + 16px);
-  height: 44px;
   margin: 0 -8px;
   padding: 0 8px;
   text-align: left;
@@ -343,8 +341,12 @@ button {
   transition: background 0.15s var(--ease);
 }
 
-button.row.agent:hover { background: var(--fill); }
-button.row.agent:active { transform: scale(0.99); }
+.row.link:hover { background: var(--fill); }
+.row.link:active { transform: scale(0.99); }
+
+/* ---------- agents module ---------- */
+
+.row.agent { height: 44px; }
 
 .row.agent .row-sub {
   font-family: inherit;

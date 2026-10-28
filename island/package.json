@@ -1,15 +1,37 @@
 {
   "name": "vistry-island",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Dynamic Island-style overlay for work data",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "setup-hooks": "node scripts/setup-hooks.js",
-    "remove-hooks": "node scripts/setup-hooks.js --uninstall"
+    "remove-hooks": "node scripts/setup-hooks.js --uninstall",
+    "test": "node --test",
+    "dist": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.vistry.island",
+    "productName": "Vistry Island",
+    "files": [
+      "main.js",
+      "preload.js",
+      "main/**",
+      "renderer/**",
+      "hooks/**",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    }
   },
   "devDependencies": {
-    "electron": "^45.1.0"
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0"
   }
 }

@@ -13,6 +13,6 @@
 //   onData(data)     optional, payload from the provider with the same id
 import agents from './agents.js';
 // import media from './media.js'; // mock, disabled for now
-// import pipelines from './pipelines.js'; // mock data, disabled until GitLab is wired
+import pipelines from './pipelines.js'; // GitLab, see main/providers/gitlab.js
 
-export default [agents /* , media, pipelines */];
+export default [agents, /* media, */ pipelines];

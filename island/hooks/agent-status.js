@@ -10,27 +10,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const DIR = path.join(os.homedir(), '.vistry-island', 'agents');
-const [tool, event] = process.argv.slice(2);
-
-let input = '';
-process.stdin.setEncoding('utf8');
-process.stdin.on('data', (chunk) => (input += chunk));
-process.stdin.on('end', () => {
-  try {
-    run(JSON.parse(input || '{}'));
-  } catch {
-    // ignore: status is best-effort
-  }
-  finish();
-});
-setTimeout(finish, 1500).unref();
-
-function finish() {
-  // Cursor's beforeSubmitPrompt expects an explicit go-ahead.
-  if (tool === 'cursor' && event === 'working') process.stdout.write('{"continue":true}\n');
-  process.exit(0);
-}
+const agentsDir = () => path.join(os.homedir(), '.vistry-island', 'agents');
+// A long-running chat refreshes its record this often, so it doesn't expire mid-run.
+const HEARTBEAT_MS = 5 * 60 * 1000;
 
 function read(file) {
   try {
@@ -116,23 +98,25 @@ function isIdleNotice(p) {
   return p.notification_type === 'idle_prompt' || /waiting for your input/i.test(p.message || '');
 }
 
-function run(p) {
+function run(tool, event, p) {
   const session = p.session_id || p.conversation_id;
   if (!tool || !session) return;
   // Cursor also runs the hooks from ~/.claude/settings.json; its own hooks.json
   // already reports the chat, so drop the Claude-flavoured duplicate.
   if (tool === 'claude' && (p.conversation_id || p.workspace_roots || p.cursor_version)) return;
 
-  const file = path.join(DIR, `${tool}-${String(session).replace(/[^\w-]/g, '')}.json`);
+  const dir = agentsDir();
+  const file = path.join(dir, `${tool}-${String(session).replace(/[^\w-]/g, '')}.json`);
   if (event === 'end') return fs.rmSync(file, { force: true });
 
+  const now = Date.now();
   const prev = read(file);
   // Tool activity means the chat is working: picks up sessions that started before the
-  // hooks existed and clears "waiting" after a permission prompt. Skip no-op rewrites,
-  // and don't let a late async PostToolUse undo a fresh Stop.
+  // hooks existed and clears "waiting" after a permission prompt. Rewrites of a working
+  // chat are throttled to the heartbeat, and a late async PostToolUse can't undo a fresh Stop.
   if (event === 'resume' && prev) {
-    if (prev.state === 'working') return;
-    if (prev.state !== 'waiting' && Date.now() - prev.updatedAt < 5000) return;
+    if (prev.state === 'working' && now - prev.updatedAt < HEARTBEAT_MS) return;
+    if (prev.state !== 'waiting' && prev.state !== 'working' && now - prev.updatedAt < 5000) return;
   }
   if (event === 'notify' && isIdleNotice(p)) return;
 
@@ -150,10 +134,17 @@ function run(p) {
     }
   }
 
+  // Claude Code delivers background-task and app events as prompts (<task-notification>…);
+  // they aren't the user's words, so they neither replace the prompt nor restart the clock.
+  const injected = typeof p.prompt === 'string' && /^\s*<(task-notification|system-reminder|[a-z-]+-event)\b/.test(p.prompt);
+  const userPrompt = event === 'working' && !injected;
+
   const cwd = p.cwd || (p.workspace_roots || [])[0] || (prev && prev.cwd) || '';
-  const prompt = typeof p.prompt === 'string'
+  const prompt = typeof p.prompt === 'string' && !injected
     ? p.prompt.replace(/\s+/g, ' ').trim().slice(0, 100)
     : prev && prev.prompt;
+  // When the current state began: kept across heartbeats, reset by a new prompt.
+  const since = prev && prev.state === state && !userPrompt ? prev.since || prev.updatedAt : now;
 
   const record = {
     tool,
@@ -163,11 +154,36 @@ function run(p) {
     prompt,
     message,
     state,
-    updatedAt: Date.now(),
+    since,
+    updatedAt: now,
   };
 
-  fs.mkdirSync(DIR, { recursive: true });
+  fs.mkdirSync(dir, { recursive: true });
   const tmp = `${file}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(record));
   fs.renameSync(tmp, file);
+}
+
+module.exports = { lastTurnQuestion, run };
+
+if (require.main === module) {
+  const [tool, event] = process.argv.slice(2);
+  const finish = () => {
+    // Cursor's beforeSubmitPrompt expects an explicit go-ahead.
+    if (tool === 'cursor' && event === 'working') process.stdout.write('{"continue":true}\n');
+    process.exit(0);
+  };
+
+  let input = '';
+  process.stdin.setEncoding('utf8');
+  process.stdin.on('data', (chunk) => (input += chunk));
+  process.stdin.on('end', () => {
+    try {
+      run(tool, event, JSON.parse(input || '{}'));
+    } catch {
+      // ignore: status is best-effort
+    }
+    finish();
+  });
+  setTimeout(finish, 1500).unref();
 }

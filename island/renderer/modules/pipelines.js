@@ -1,11 +1,15 @@
-// Pipelines module: renders whatever the "pipelines" provider emits
-// ([{ project, ref, status }]). Data is mocked in main/providers/pipelines.mock.js.
+// Pipelines module: latest GitLab pipeline per project from the "pipelines" provider
+// ([{ id, project, ref, status, url?, error? }]). Hidden until GitLab is configured.
 const STATUS = {
-  failed: { label: 'Failed', color: 'var(--err)', rank: 3 },
-  running: { label: 'Running', color: 'var(--run)', rank: 2 },
-  pending: { label: 'Pending', color: 'var(--warn)', rank: 1 },
+  failed: { label: 'Failed', color: 'var(--err)', rank: 5 },
+  error: { label: 'Error', color: 'var(--err)', rank: 4 },
+  running: { label: 'Running', color: 'var(--run)', rank: 3 },
+  pending: { label: 'Pending', color: 'var(--warn)', rank: 2 },
+  manual: { label: 'Manual', color: 'var(--fg-2)', rank: 1 },
+  canceled: { label: 'Canceled', color: 'var(--fg-2)', rank: 0 },
   success: { label: 'Passed', color: 'var(--ok)', rank: 0 },
 };
+const MAX_ROWS = 5;
 
 let ctx;
 let rowsEl;
@@ -16,7 +20,7 @@ const lastStatus = new Map();
 function summary() {
   const worst = list.reduce((a, p) => (STATUS[p.status].rank > STATUS[a].rank ? p.status : a), 'success');
   const n = list.filter((p) => p.status === worst).length;
-  const text = worst === 'success' ? 'All passed' : `${n} ${STATUS[worst].label.toLowerCase()}`;
+  const text = worst === 'success' || worst === 'canceled' ? 'All passed' : `${n} ${STATUS[worst].label.toLowerCase()}`;
   return { color: STATUS[worst].color, text };
 }
 
@@ -25,12 +29,19 @@ function render() {
   ctx.left.style.setProperty('--c', color);
   ctx.right.style.setProperty('--c', color);
   ctx.right.querySelector('.summary').textContent = text;
-  countEl.textContent = `${list.length} active`;
+  countEl.textContent = `${list.length} project${list.length === 1 ? '' : 's'}`;
 
-  rowsEl.replaceChildren(...list.map((p) => {
+  // Broken and running first.
+  const sorted = [...list].sort((a, b) => STATUS[b.status].rank - STATUS[a.status].rank);
+
+  rowsEl.replaceChildren(...sorted.slice(0, MAX_ROWS).map((p) => {
     const s = STATUS[p.status];
-    const row = document.createElement('div');
-    row.className = 'row';
+    const row = document.createElement(p.url ? 'button' : 'div');
+    row.className = p.url ? 'row link' : 'row';
+    if (p.url) {
+      row.title = 'Open in GitLab';
+      row.addEventListener('click', () => window.island.open(p.url));
+    }
     row.innerHTML = `
       <div class="row-main">
         <div class="row-title"></div>
@@ -40,7 +51,7 @@ function render() {
         <span class="status-dot"></span>${s.label}
       </div>`;
     row.querySelector('.row-title').textContent = p.project;
-    row.querySelector('.row-sub').textContent = p.ref;
+    row.querySelector('.row-sub').textContent = p.error || p.ref;
     return row;
   }));
 }
@@ -49,7 +60,7 @@ export default {
   id: 'pipelines',
   title: 'Pipelines',
   get expandedHeight() {
-    return 70 + list.length * 37;
+    return 76 + Math.min(list.length, MAX_ROWS) * 37;
   },
 
   setup(c) {
@@ -68,11 +79,11 @@ export default {
   onData(data) {
     // A pipeline that just finished (passed or failed) is worth a glance.
     const attention = data.some((p) => {
-      const prev = lastStatus.get(p.project);
+      const prev = lastStatus.get(p.id);
       return prev && prev !== p.status && (p.status === 'failed' || p.status === 'success');
     });
-    for (const p of data) lastStatus.set(p.project, p.status);
-    list = data;
+    for (const p of data) lastStatus.set(p.id, p.status);
+    list = data.filter((p) => STATUS[p.status]);
     render();
     ctx.changed({ attention });
   },
