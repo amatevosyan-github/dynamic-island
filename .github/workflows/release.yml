@@ -1,0 +1,51 @@
+# Pushing a tag vX.Y.Z builds the Windows installer and publishes a GitHub release.
+# GitHub adds the source zip and tar.gz itself; this job attaches the installer.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: island/package-lock.json
+
+      - name: Install and build
+        working-directory: island
+        run: |
+          npm ci
+          npm run dist
+
+      - name: Publish GitHub release
+        working-directory: island
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=()
+          for f in dist/*.exe; do
+            [[ "$f" == *.__uninstaller.exe ]] && continue
+            assets+=("$f")
+          done
+          if [ ${#assets[@]} -eq 0 ]; then
+            echo "Installer exe was not produced" >&2
+            exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            --verify-tag

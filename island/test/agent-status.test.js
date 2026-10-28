@@ -31,7 +31,7 @@ function hook(home, tool, event, payload) {
 
 const record = (home, name) => {
   try {
-    return JSON.parse(fs.readFileSync(path.join(home, '.vistry-island', 'agents', `${name}.json`), 'utf8'));
+    return JSON.parse(fs.readFileSync(path.join(home, '.dynamic-island', 'agents', `${name}.json`), 'utf8'));
   } catch {
     return null;
   }
@@ -119,7 +119,7 @@ test('hook: tool use creates a record for a chat that started before the hooks',
 test('hook: working heartbeat keeps the start time', () => {
   const home = tempHome();
   hook(home, 'claude', 'working', { session_id: 's4', cwd: 'C:/x' });
-  const file = path.join(home, '.vistry-island', 'agents', 'claude-s4.json');
+  const file = path.join(home, '.dynamic-island', 'agents', 'claude-s4.json');
   const old = { ...record(home, 'claude-s4'), since: 1000, updatedAt: Date.now() - 6 * 60 * 1000 };
   fs.writeFileSync(file, JSON.stringify(old));
 
@@ -132,7 +132,7 @@ test('hook: working heartbeat keeps the start time', () => {
 test('hook: background-task notifications are not the user prompt', () => {
   const home = tempHome();
   hook(home, 'claude', 'working', { session_id: 's5', cwd: 'C:/x', prompt: 'Build the installer' });
-  const file = path.join(home, '.vistry-island', 'agents', 'claude-s5.json');
+  const file = path.join(home, '.dynamic-island', 'agents', 'claude-s5.json');
   fs.writeFileSync(file, JSON.stringify({ ...record(home, 'claude-s5'), since: 1000 }));
 
   hook(home, 'claude', 'working', { session_id: 's5', prompt: '<task-notification>\n<task-id>b1</task-id>' });

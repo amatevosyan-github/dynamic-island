@@ -6,7 +6,7 @@
 const { spawn } = require('child_process');
 
 const SCRIPT = `
-Add-Type -Namespace VistryIsland -Name User32 -MemberDefinition @'
+Add-Type -Namespace DynamicIsland -Name User32 -MemberDefinition @'
 [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
 [StructLayout(LayoutKind.Sequential)] public struct MONITORINFO { public int cbSize; public RECT rcMonitor; public RECT rcWork; public int dwFlags; }
 [DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow();
@@ -16,20 +16,20 @@ Add-Type -Namespace VistryIsland -Name User32 -MemberDefinition @'
 [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetClassName(System.IntPtr h, System.Text.StringBuilder s, int n);
 [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
 '@
-[void][VistryIsland.User32]::SetProcessDPIAware()
+[void][DynamicIsland.User32]::SetProcessDPIAware()
 $shell = @('Progman', 'WorkerW', 'Shell_TrayWnd', 'Shell_SecondaryTrayWnd')
 $last = ''
 while ($true) {
   $full = 0
-  $h = [VistryIsland.User32]::GetForegroundWindow()
+  $h = [DynamicIsland.User32]::GetForegroundWindow()
   if ($h -ne [System.IntPtr]::Zero) {
     $cls = New-Object System.Text.StringBuilder 64
-    [void][VistryIsland.User32]::GetClassName($h, $cls, 64)
-    $r = New-Object VistryIsland.User32+RECT
-    $mi = New-Object VistryIsland.User32+MONITORINFO
+    [void][DynamicIsland.User32]::GetClassName($h, $cls, 64)
+    $r = New-Object DynamicIsland.User32+RECT
+    $mi = New-Object DynamicIsland.User32+MONITORINFO
     $mi.cbSize = [System.Runtime.InteropServices.Marshal]::SizeOf($mi)
-    if (($shell -notcontains $cls.ToString()) -and [VistryIsland.User32]::GetWindowRect($h, [ref]$r) -and
-        [VistryIsland.User32]::GetMonitorInfo([VistryIsland.User32]::MonitorFromWindow($h, 2), [ref]$mi)) {
+    if (($shell -notcontains $cls.ToString()) -and [DynamicIsland.User32]::GetWindowRect($h, [ref]$r) -and
+        [DynamicIsland.User32]::GetMonitorInfo([DynamicIsland.User32]::MonitorFromWindow($h, 2), [ref]$mi)) {
       $m = $mi.rcMonitor
       if ($r.L -le $m.L -and $r.T -le $m.T -and $r.R -ge $m.R -and $r.B -ge $m.B) { $full = 1 }
     }

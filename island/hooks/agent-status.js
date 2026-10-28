@@ -4,13 +4,13 @@
 //   node agent-status.js <claude|cursor> <working|done|notify|resume|end>
 //
 // Reads the hook payload (JSON) from stdin and keeps one file per chat in
-// ~/.vistry-island/agents/, which the island's "agents" provider watches.
+// ~/.dynamic-island/agents/, which the island's "agents" provider watches.
 // Never fails the host tool: any error is swallowed and the hook exits 0.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const agentsDir = () => path.join(os.homedir(), '.vistry-island', 'agents');
+const agentsDir = () => path.join(os.homedir(), '.dynamic-island', 'agents');
 // A long-running chat refreshes its record this often, so it doesn't expire mid-run.
 const HEARTBEAT_MS = 5 * 60 * 1000;
 

@@ -1,5 +1,5 @@
 {
-  "name": "vistry-island",
+  "name": "dynamic-island",
   "version": "0.2.0",
   "private": true,
   "description": "Dynamic Island-style overlay for work data",
@@ -12,8 +12,8 @@
     "dist": "electron-builder --win nsis"
   },
   "build": {
-    "appId": "com.vistry.island",
-    "productName": "Vistry Island",
+    "appId": "com.dynamic.island",
+    "productName": "Dynamic Island",
     "files": [
       "main.js",
       "preload.js",

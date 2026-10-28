@@ -299,7 +299,7 @@ function buildMenu() {
     { label: 'Settings…', click: () => send('island:open-settings') },
     { label: 'Reload', click: () => win && win.reload() },
     { type: 'separator' },
-    { label: 'Quit Vistry Island', click: () => app.quit() },
+    { label: 'Quit Dynamic Island', click: () => app.quit() },
   ]);
 }
 
@@ -320,7 +320,7 @@ async function checkHooks() {
     type: 'question',
     buttons: ['Install', 'Not now'],
     defaultId: 0,
-    title: 'Vistry Island',
+    title: 'Dynamic Island',
     message: 'Show your Claude Code and Cursor chats on the island?',
     detail:
       'This adds status hooks to ~/.claude/settings.json and ~/.cursor/hooks.json (your other settings are kept, a .bak copy is made). ' +
@@ -330,7 +330,7 @@ async function checkHooks() {
   try {
     hooks.install(hookScript());
   } catch (e) {
-    dialog.showErrorBox('Vistry Island', e.message);
+    dialog.showErrorBox('Dynamic Island', e.message);
   }
 }
 
@@ -380,12 +380,12 @@ ipcMain.on('island:command', (_e, { id, name, payload } = {}) => {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.setAppUserModelId('Vistry Island');
+  app.setAppUserModelId('Dynamic Island');
   app.whenReady().then(() => {
     watchConfig();
     createWindow();
     tray = new Tray(trayIcon());
-    tray.setToolTip('Vistry Island');
+    tray.setToolTip('Dynamic Island');
     tray.on('click', () => send('island:open-settings'));
     tray.on('right-click', () => tray.popUpContextMenu(buildMenu()));
     const stopFullscreen = watchFullscreen((value) => {

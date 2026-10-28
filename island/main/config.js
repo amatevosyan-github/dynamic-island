@@ -1,10 +1,10 @@
-// User settings in ~/.vistry-island/config.json. Edited from the island's settings panel
+// User settings in ~/.dynamic-island/config.json. Edited from the island's settings panel
 // or by hand. A file that doesn't parse is never overwritten.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const DIR = path.join(os.homedir(), '.vistry-island');
+const DIR = path.join(os.homedir(), '.dynamic-island');
 const FILE = path.join(DIR, 'config.json');
 
 const EDGES = ['top', 'bottom', 'left', 'right'];

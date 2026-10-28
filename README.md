@@ -1,4 +1,4 @@
-# vistry-utils
+# Dynamic Island
 
 ## Island
 
@@ -12,7 +12,7 @@ The island is built from modules, so other sources can be added next to these.
 
 ### Install
 
-**Installer.** Run `Vistry Island Setup <version>.exe` (built with `npm run dist`, see
+**Installer.** Run `Dynamic Island Setup <version>.exe` (built with `npm run dist`, see
 below). On first start the island offers to install the agent hooks. Windows may show
 a SmartScreen warning because the installer isn't code-signed.
 
@@ -39,7 +39,7 @@ afterwards so it loads its hooks.
 
 From source the hooks point at the checkout by absolute path, so re-run
 `npm run setup-hooks` after moving the folder. The installed app copies the hook script
-to `~/.vistry-island/hooks/` instead.
+to `~/.dynamic-island/hooks/` instead.
 
 To remove them: `npm run remove-hooks`, or **Remove** under Agents in the settings.
 
@@ -69,7 +69,7 @@ opens the settings inside the island:
 - **GitLab**: accounts for the pipelines module (below).
 
 Toggles apply right away; GitLab accounts save with **Save** or when the panel closes.
-Everything is stored in `~/.vistry-island/config.json`, which you can also edit by hand;
+Everything is stored in `~/.dynamic-island/config.json`, which you can also edit by hand;
 the island picks up changes when the file is saved.
 
 ### GitLab
@@ -116,7 +116,7 @@ Pipelines are checked every minute, and every 15 seconds while one is running.
 
 ### What is stored
 
-Each chat is one small JSON file in `~/.vistry-island/agents/`: the project folder,
+Each chat is one small JSON file in `~/.dynamic-island/agents/`: the project folder,
 the first ~100 characters of the latest prompt, the agent's last question and the
 state. To tell "done" from "waiting for you", the hook reads the tail of that chat's
 transcript on your machine. Files of finished chats are deleted after a day. Nothing is

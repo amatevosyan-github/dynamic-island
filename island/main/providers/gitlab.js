@@ -1,5 +1,5 @@
 // Latest pipeline per GitLab project, for the "pipelines" module.
-// Configured in ~/.vistry-island/config.json as a list of accounts, each with its own
+// Configured in ~/.dynamic-island/config.json as a list of accounts, each with its own
 // instance and token (a single object is accepted too):
 //   "gitlab": [
 //     { "name": "work", "url": "https://gitlab.example.com", "token": "<read_api token>",

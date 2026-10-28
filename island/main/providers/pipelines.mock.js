@@ -5,9 +5,9 @@ module.exports = {
   id: 'pipelines',
   start(emit) {
     const pipelines = [
-      { project: 'vistry-web', ref: 'main', step: 3 },
-      { project: 'vistry-api', ref: 'staging', step: 1 },
-      { project: 'vistry-utils', ref: 'feat/island', step: 0 },
+      { project: 'island-web', ref: 'main', step: 3 },
+      { project: 'island-api', ref: 'staging', step: 1 },
+      { project: 'island-utils', ref: 'feat/island', step: 0 },
     ];
 
     const send = () => emit(pipelines.map((p) => ({ id: p.project, project: p.project, ref: p.ref, status: CYCLE[p.step] })));

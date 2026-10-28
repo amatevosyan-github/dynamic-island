@@ -54,7 +54,7 @@ export function createSettings(root, { onClose }) {
       <div class="group-note" data-role="status"></div>
 
       <div class="group">
-        <button class="cell danger" data-act="quit">Quit Vistry Island</button>
+        <button class="cell danger" data-act="quit">Quit Dynamic Island</button>
       </div>
     </div>`;
 

@@ -1,12 +1,12 @@
 // Agent chats (Claude Code, Cursor) reported by hooks/agent-status.js.
-// Each chat is one JSON file in ~/.vistry-island/agents/; we watch the folder.
+// Each chat is one JSON file in ~/.dynamic-island/agents/; we watch the folder.
 // Claude chats are enriched from the Claude desktop app's session index
 // (title, archived flag, deep link to open the chat).
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const DIR = path.join(os.homedir(), '.vistry-island', 'agents');
+const DIR = path.join(os.homedir(), '.dynamic-island', 'agents');
 const HOUR = 60 * 60 * 1000;
 // Chats drop off the island after this long without an update (working chats refresh
 // every few minutes via the hook's heartbeat), and their files are deleted after a day.
