@@ -265,9 +265,9 @@ button {
 .controls svg { width: 20px; height: 20px; fill: currentColor; }
 .controls .big svg { width: 26px; height: 26px; }
 
-/* ---------- pipelines module ---------- */
+/* ---------- status lists (pipelines, agents) ---------- */
 
-.pl-dot {
+.status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -275,14 +275,14 @@ button {
   box-shadow: 0 0 8px var(--c, transparent);
 }
 
-.pl-summary {
+.summary {
   font-size: 12px;
   font-weight: 600;
   color: var(--c, var(--fg-2));
   white-space: nowrap;
 }
 
-.pl-head {
+.list-head {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
@@ -290,7 +290,7 @@ button {
   margin-bottom: 8px;
 }
 
-.pl-row {
+.row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -298,17 +298,17 @@ button {
   border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.pl-name { flex: 1; min-width: 0; }
+.row-main { flex: 1; min-width: 0; }
 
-.pl-project { font-weight: 600; }
+.row-title { font-weight: 600; }
 
-.pl-ref {
+.row-sub {
   color: var(--fg-3);
   font-family: "Cascadia Mono", Consolas, monospace;
   font-size: 11px;
 }
 
-.pl-status {
+.status-pill {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -320,8 +320,63 @@ button {
   background: color-mix(in srgb, var(--c) 16%, transparent);
 }
 
-.pl-status .pl-dot { width: 6px; height: 6px; box-shadow: none; }
-.pl-status.running .pl-dot { animation: blink 1s ease-in-out infinite; }
+.status-pill .status-dot { width: 6px; height: 6px; box-shadow: none; }
+.status-pill.running .status-dot,
+.status-pill.working .status-dot { animation: blink 1s ease-in-out infinite; }
+
+.row-title,
+.row-sub {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- agents module ---------- */
+
+.row.agent {
+  width: calc(100% + 16px);
+  height: 44px;
+  margin: 0 -8px;
+  padding: 0 8px;
+  text-align: left;
+  border-radius: 12px;
+  transition: background 0.15s var(--ease);
+}
+
+button.row.agent:hover { background: var(--fill); }
+button.row.agent:active { transform: scale(0.99); }
+
+.row.agent .row-sub {
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.agent-tool {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #000;
+  background: var(--t);
+}
+
+.agent-age {
+  flex: none;
+  width: 28px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--fg-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.agent-empty {
+  padding-top: 10px;
+  color: var(--fg-3);
+}
 
 @keyframes blink {
   50% { opacity: 0.25; }

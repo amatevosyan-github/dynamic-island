@@ -24,23 +24,23 @@ function render() {
   const { color, text } = summary();
   ctx.left.style.setProperty('--c', color);
   ctx.right.style.setProperty('--c', color);
-  ctx.right.querySelector('.pl-summary').textContent = text;
+  ctx.right.querySelector('.summary').textContent = text;
   countEl.textContent = `${list.length} active`;
 
   rowsEl.replaceChildren(...list.map((p) => {
     const s = STATUS[p.status];
     const row = document.createElement('div');
-    row.className = 'pl-row';
+    row.className = 'row';
     row.innerHTML = `
-      <div class="pl-name">
-        <div class="pl-project"></div>
-        <div class="pl-ref"></div>
+      <div class="row-main">
+        <div class="row-title"></div>
+        <div class="row-sub"></div>
       </div>
-      <div class="pl-status ${p.status}" style="--c:${s.color}">
-        <span class="pl-dot"></span>${s.label}
+      <div class="status-pill ${p.status}" style="--c:${s.color}">
+        <span class="status-dot"></span>${s.label}
       </div>`;
-    row.querySelector('.pl-project').textContent = p.project;
-    row.querySelector('.pl-ref').textContent = p.ref;
+    row.querySelector('.row-title').textContent = p.project;
+    row.querySelector('.row-sub').textContent = p.ref;
     return row;
   }));
 }
@@ -54,13 +54,13 @@ export default {
 
   setup(c) {
     ctx = c;
-    c.left.innerHTML = '<span class="pl-dot"></span>';
-    c.right.innerHTML = '<span class="pl-summary"></span>';
+    c.left.innerHTML = '<span class="status-dot"></span>';
+    c.right.innerHTML = '<span class="summary"></span>';
     c.body.innerHTML = `
-      <div class="pl-head"><span>Pipelines</span><span class="pl-count"></span></div>
-      <div class="pl-rows"></div>`;
-    rowsEl = c.body.querySelector('.pl-rows');
-    countEl = c.body.querySelector('.pl-count');
+      <div class="list-head"><span>Pipelines</span><span class="list-count"></span></div>
+      <div class="list-rows"></div>`;
+    rowsEl = c.body.querySelector('.list-rows');
+    countEl = c.body.querySelector('.list-count');
   },
 
   hasActivity: () => list.length > 0,

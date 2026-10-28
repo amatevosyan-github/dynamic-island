@@ -1,4 +1,4 @@
-const { app, BrowserWindow, screen, ipcMain, Menu, Tray, nativeImage } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Menu, Tray, nativeImage, shell } = require('electron');
 const path = require('path');
 const providers = require('./main/providers');
 
@@ -87,6 +87,17 @@ function trayIcon() {
 ipcMain.on('island:interactive', (_e, interactive) => {
   if (!win) return;
   win.setIgnoreMouseEvents(!interactive, { forward: true });
+});
+
+// Only app deep links the modules are expected to produce.
+const OPENABLE = new Set(['claude:', 'cursor:']);
+
+ipcMain.on('island:open', (_e, url) => {
+  try {
+    if (OPENABLE.has(new URL(url).protocol)) shell.openExternal(url);
+  } catch {
+    // not a URL
+  }
 });
 
 ipcMain.on('island:menu', () => {

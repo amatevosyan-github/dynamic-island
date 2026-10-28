@@ -11,7 +11,8 @@
 //                    brings the module forward with a pulse.
 //   hasActivity()    false → module has nothing to show right now
 //   onData(data)     optional, payload from the provider with the same id
-import media from './media.js';
-import pipelines from './pipelines.js';
+import agents from './agents.js';
+// import media from './media.js'; // mock, disabled for now
+// import pipelines from './pipelines.js'; // mock data, disabled until GitLab is wired
 
-export default [media, pipelines];
+export default [agents /* , media, pipelines */];
