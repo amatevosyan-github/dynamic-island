@@ -1,0 +1,13 @@
+{
+  "name": "vistry-island",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dynamic Island-style overlay for work data",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^45.1.0"
+  }
+}
