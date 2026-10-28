@@ -6,14 +6,21 @@
   <title>Island</title>
   <link rel="stylesheet" href="island.css">
 </head>
-<body>
+<body data-dock="top">
   <div class="stage">
-    <div id="island" data-state="idle">
-      <div class="layer compact" id="compact"></div>
-      <div class="layer expanded" id="expanded">
-        <div id="bodies"></div>
-        <div class="dots" id="dots"></div>
+    <div class="cluster">
+      <div id="island" data-state="idle">
+        <div class="layer compact" id="compact"></div>
+        <div class="layer expanded" id="expanded">
+          <div id="bodies"></div>
+          <div id="settings" class="settings" hidden></div>
+          <div class="dots" id="dots"></div>
+        </div>
       </div>
+      <!-- Settings button: a small second island beside the expanded one. -->
+      <button class="satellite" id="gear" title="Settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6a.5.5 0 0 0 .1-.6l-1.9-3.3a.5.5 0 0 0-.6-.2l-2.4 1a7.4 7.4 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.4h-3.8a.5.5 0 0 0-.5.4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.4-1a.5.5 0 0 0-.6.2L2.5 8.8a.5.5 0 0 0 .1.6l2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6a.5.5 0 0 0-.1.6l1.9 3.3c.1.2.4.3.6.2l2.4-1c.5.4 1.1.7 1.7 1l.4 2.6c0 .2.3.4.5.4h3.8c.2 0 .5-.2.5-.4l.4-2.6c.6-.3 1.2-.6 1.7-1l2.4 1c.2.1.5 0 .6-.2l1.9-3.3a.5.5 0 0 0-.1-.6l-2-1.6ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg>
+      </button>
     </div>
   </div>
   <script type="module" src="island.js"></script>

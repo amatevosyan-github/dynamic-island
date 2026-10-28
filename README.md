@@ -32,7 +32,7 @@ Cursor.
 ### Agent hooks
 
 The hooks are how the island learns about your chats. `npm run setup-hooks` (or
-**Install agent hooks…** in the tray menu) adds them to `~/.claude/settings.json` and,
+**Install** under Agents in the island's settings) adds them to `~/.claude/settings.json` and,
 if Cursor is installed, to `~/.cursor/hooks.json`. Your other settings and hooks are
 kept, a `.bak` copy is written first, and running it again is safe. Restart Cursor
 afterwards so it loads its hooks.
@@ -41,11 +41,14 @@ From source the hooks point at the checkout by absolute path, so re-run
 `npm run setup-hooks` after moving the folder. The installed app copies the hook script
 to `~/.vistry-island/hooks/` instead.
 
-To remove them: `npm run remove-hooks`, or **Remove agent hooks** in the tray menu.
+To remove them: `npm run remove-hooks`, or **Remove** under Agents in the settings.
 
 ### Using it
 
 - Hover or click the pill to expand it; it collapses when the pointer leaves.
+- **Drag** the island to any edge of any screen. It snaps there and always expands away
+  from the edge: from the bottom it opens upwards, from the left it opens to the right.
+  On the left and right edges the pill stands upright and statuses show as icons.
 - Click a chat row to open it: Claude chats open in the Claude desktop app, Cursor rows
   bring up that workspace's window. Right-click a row to hide it until it changes.
 - Click a pipeline row to open it in GitLab.
@@ -53,16 +56,32 @@ To remove them: `npm run remove-hooks`, or **Remove agent hooks** in the tray me
 - Scroll over the island or click the dots to switch between modules that have data.
 - The time on a chat row is how long it has been in its current state.
 
-The tray menu (click the tray icon or right-click the island) has: launch at startup,
-notifications (Windows toasts when a chat needs you or finishes, or a pipeline passes or
-fails; off by default), hide in full screen (on by default: videos, games,
-presentations), the hooks, the settings file, and Quit.
+### Settings
 
-### Settings and GitLab
+The round **gear button** next to the expanded island (or a click on the tray icon)
+opens the settings inside the island:
 
-Settings live in `~/.vistry-island/config.json` (tray menu → **Open settings file**);
-the island picks up changes when you save. To show pipelines, fill in `gitlab`: a list
-of accounts, each with its own GitLab instance and token.
+- **General**: launch at startup; notifications (Windows toasts when a chat needs you
+  or finishes, or a pipeline passes or fails; off by default); hide in full screen (on
+  by default: videos, games, presentations).
+- **Position**: top, bottom, left or right edge (or just drag the island).
+- **Agents**: install or remove the Claude Code and Cursor hooks.
+- **GitLab**: accounts for the pipelines module (below).
+
+Toggles apply right away; GitLab accounts save with **Save** or when the panel closes.
+Everything is stored in `~/.vistry-island/config.json`, which you can also edit by hand;
+the island picks up changes when the file is saved.
+
+### GitLab
+
+Add one account per GitLab instance or token. Projects go one per line as
+`group/project`, or `group/project@branch` to follow one branch. The token needs only
+read access: **CI/CD → pipelines: read** and **Projects: read** for a fine-grained
+token, or the `read_api` scope for a classic one. Tokens entered in the settings are
+encrypted with Windows' DPAPI before they're written to the file, and the settings panel
+never shows them again ("Saved · type to replace").
+
+The file format, if you'd rather edit it by hand (a plain `token` works there too):
 
 ```json
 {
@@ -84,8 +103,8 @@ of accounts, each with its own GitLab instance and token.
 }
 ```
 
-- `token`: a personal, group or project access token with only the `read_api` scope.
-  It is stored in this file as plain text, so don't use a token with write access.
+- `token`: a read-only token. Typed here it stays plain text; entered in the settings
+  panel it is stored encrypted as `tokenEnc` instead.
 - `projects`: full project paths as in the GitLab URL, or `{ "path", "ref" }` to follow
   one branch of that project.
 - `ref`: a branch to follow for all of the account's projects; empty means the latest

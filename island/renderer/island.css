@@ -40,14 +40,24 @@ button {
 
 /* ---------- shell ---------- */
 
+/* The window is a transparent canvas; the stage pins the island to the docked edge
+   (body[data-dock]) so it grows away from that edge. Padding matches main/dock.js PAD. */
 .stage {
+  position: fixed;
+  inset: 0;
   display: flex;
+  padding: 4px;
   justify-content: center;
-  padding-top: 2px;
+  align-items: flex-start;
 }
+
+body[data-dock="bottom"] .stage { align-items: flex-end; }
+body[data-dock="left"] .stage { justify-content: flex-start; align-items: center; }
+body[data-dock="right"] .stage { justify-content: flex-end; align-items: center; }
 
 #island {
   position: relative;
+  flex: none;
   width: 120px;
   height: 32px;
   border-radius: 16px;
@@ -58,6 +68,11 @@ button {
     width 0.55s var(--spring),
     height 0.55s var(--spring),
     border-radius 0.55s var(--spring);
+}
+
+body.dragging #island {
+  cursor: grabbing;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 16px 40px rgba(0, 0, 0, 0.5);
 }
 
 #island.pulse { animation: pulse 0.6s var(--spring); }
@@ -99,6 +114,33 @@ button {
   min-width: 0;
 }
 
+/* Side docks: the pill stands upright, ears go top and bottom, words become glyphs. */
+body.vertical .ears {
+  flex-direction: column;
+  padding: 10px 0;
+}
+
+body.vertical .ear { flex-direction: column; }
+
+.ear-icon,
+.summary-count { display: none; }
+
+body.vertical .ear .status-dot,
+body.vertical .ear .summary { display: none; }
+
+body.vertical .ear-icon {
+  display: grid;
+  color: var(--c, var(--fg-2));
+}
+
+body.vertical .summary-count {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c, var(--fg-2));
+  font-variant-numeric: tabular-nums;
+}
+
 #island[data-state="idle"] .compact { opacity: 0; }
 
 #island[data-state="expanded"] .compact {
@@ -108,13 +150,14 @@ button {
   pointer-events: none;
 }
 
-/* Fixed width so content never reflows while the pill grows: it is revealed, not squeezed. */
+/* Fixed width (--xw, set per state) so content never reflows while the pill grows:
+   it is revealed, not squeezed. Anchored on the docked side. */
 .expanded {
   top: 0;
   bottom: 0;
   left: 50%;
-  width: 400px;
-  margin-left: -200px;
+  width: var(--xw, 400px);
+  margin-left: calc(var(--xw, 400px) / -2);
   padding: 18px 22px 24px;
   opacity: 0;
   filter: blur(8px);
@@ -122,6 +165,23 @@ button {
   transform-origin: top center;
   pointer-events: none;
 }
+
+body[data-dock="bottom"] .expanded { transform-origin: bottom center; }
+
+body[data-dock="left"] .expanded {
+  left: 0;
+  margin-left: 0;
+  transform-origin: center left;
+}
+
+body[data-dock="right"] .expanded {
+  left: auto;
+  right: 0;
+  margin-left: 0;
+  transform-origin: center right;
+}
+
+body.vertical .expanded { padding: 16px 16px 24px; }
 
 #island[data-state="expanded"] .expanded {
   opacity: 1;
@@ -133,11 +193,58 @@ button {
 
 .body:not([hidden]) { animation: fade-in 0.3s var(--ease); }
 
+/* The island plus its settings button. The cluster is exactly the island's size, so the
+   button hanging outside it never shifts the island off its anchor. */
+.cluster {
+  position: relative;
+  flex: none;
+  display: flex;
+}
+
+/* Settings button: a small second island, beside the expanded one on the side away
+   from the docked edge (right of it on top/bottom docks, below it on side docks). */
+.satellite {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #000;
+  color: var(--fg-2);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 10px 30px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transform: scale(0.3);
+  pointer-events: none;
+  transition:
+    opacity 0.2s var(--ease),
+    transform 0.45s var(--spring),
+    color 0.15s var(--ease);
+}
+
+.satellite svg { width: 16px; height: 16px; fill: currentColor; transition: transform 0.4s var(--spring); }
+.satellite:hover { color: var(--fg); }
+.satellite:hover svg { transform: rotate(45deg); }
+.satellite:active { transform: scale(0.9); }
+
+.cluster.show-gear .satellite {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  transition-delay: 0.12s;
+}
+
+body[data-dock="bottom"] .satellite { top: auto; bottom: 0; }
+body[data-dock="left"] .satellite { left: 0; top: calc(100% + 8px); }
+body[data-dock="right"] .satellite { left: auto; right: 0; top: calc(100% + 8px); }
+
 .dots {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 10px;
+  bottom: 12px;
   display: flex;
   justify-content: center;
   gap: 5px;
@@ -324,6 +431,26 @@ button {
 .status-pill.running .status-dot,
 .status-pill.working .status-dot { animation: blink 1s ease-in-out infinite; }
 
+.status-icon { width: 14px; height: 14px; }
+.status-icon.spin { animation: spin 1s linear infinite; }
+.status-pill .status-icon { display: none; }
+
+/* Side docks: the pill shrinks to a round glyph. */
+body.vertical .status-pill {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  justify-content: center;
+}
+
+body.vertical .status-pill .status-dot,
+body.vertical .status-pill .status-label { display: none; }
+body.vertical .status-pill .status-icon { display: block; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .row-title,
 .row-sub {
   white-space: nowrap;
@@ -378,6 +505,183 @@ button {
 .agent-empty {
   padding-top: 10px;
   color: var(--fg-3);
+}
+
+/* ---------- settings panel (iOS-style grouped list) ---------- */
+
+.settings {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 0 0;
+  animation: fade-in 0.3s var(--ease);
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px 10px;
+}
+
+.settings-title { font-size: 15px; font-weight: 700; }
+
+.settings-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 14px 18px;
+  user-select: text;
+}
+
+.settings-scroll::-webkit-scrollbar { width: 6px; }
+.settings-scroll::-webkit-scrollbar-thumb { background: var(--fill); border-radius: 3px; }
+
+.group-label {
+  margin: 14px 8px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.group-note {
+  margin: 6px 8px 0;
+  font-size: 11px;
+  color: var(--fg-3);
+}
+
+.group-note.error { color: var(--err); }
+
+.group {
+  margin-bottom: 8px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 12px;
+  text-align: left;
+}
+
+.cell + .cell { border-top: 1px solid rgba(255, 255, 255, 0.07); }
+
+.cell-text { display: flex; flex-direction: column; }
+.cell-sub { font-size: 11px; color: var(--fg-3); }
+
+.cell.danger { color: var(--err); justify-content: center; }
+.cell.danger:hover { background: rgba(255, 69, 58, 0.1); }
+
+.cell.field > span {
+  flex: none;
+  width: 64px;
+  color: var(--fg-2);
+}
+
+.cell.field.column { flex-direction: column; align-items: stretch; gap: 4px; }
+
+.cell input[type="text"],
+.cell input[type="password"],
+.cell textarea {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+  font: inherit;
+  color: var(--fg);
+  background: none;
+  border: 0;
+  outline: none;
+  resize: none;
+}
+
+.cell textarea {
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+}
+
+.cell ::placeholder { color: var(--fg-3); }
+
+/* iOS switch */
+.switch {
+  appearance: none;
+  flex: none;
+  position: relative;
+  width: 40px;
+  height: 24px;
+  margin: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.16);
+  cursor: pointer;
+  transition: background 0.25s var(--ease);
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s var(--spring);
+}
+
+.switch:checked { background: var(--ok); }
+.switch:checked::after { transform: translateX(16px); }
+
+/* Segmented control */
+.segmented {
+  display: flex;
+  flex: 1;
+  padding: 2px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.segmented button {
+  flex: 1;
+  padding: 5px 0;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--fg-2);
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.segmented button.on {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.pill-btn {
+  flex: none;
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--fill);
+  transition: background 0.15s var(--ease), opacity 0.15s var(--ease);
+}
+
+.pill-btn:hover { background: rgba(255, 255, 255, 0.2); }
+.pill-btn.primary { background: var(--run); }
+.pill-btn.primary:hover { background: #3395ff; }
+.pill-btn:disabled { opacity: 0.4; cursor: default; }
+
+.settings-actions {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 4px 0;
 }
 
 @keyframes blink {

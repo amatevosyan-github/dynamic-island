@@ -1,5 +1,7 @@
 // Agents module: Claude Code / Cursor chats from the "agents" provider
 // ([{ tool, session, project, prompt, message, state, updatedAt }]).
+import { STATUS_ICON, statusPill } from '../icons.js';
+
 const STATE = {
   waiting: { label: 'Needs you', color: 'var(--warn)', rank: 3 },
   error: { label: 'Error', color: 'var(--err)', rank: 2 },
@@ -30,7 +32,7 @@ function summary() {
   const worst = list.reduce((a, x) => (STATE[x.state].rank > STATE[a].rank ? x.state : a), 'done');
   const n = list.filter((x) => x.state === worst).length;
   const text = worst === 'waiting' ? `${n} need${n === 1 ? 's' : ''} you` : `${n} ${STATE[worst].label.toLowerCase()}`;
-  return { color: STATE[worst].color, text };
+  return { worst, n, color: STATE[worst].color, text };
 }
 
 function render() {
@@ -40,10 +42,12 @@ function render() {
     return;
   }
 
-  const { color, text } = summary();
+  const { worst, n, color, text } = summary();
   ctx.left.style.setProperty('--c', color);
   ctx.right.style.setProperty('--c', color);
+  ctx.left.querySelector('.ear-icon').innerHTML = STATUS_ICON[worst];
   ctx.right.querySelector('.summary').textContent = text;
+  ctx.right.querySelector('.summary-count').textContent = n;
   countEl.textContent = `${list.length} chat${list.length === 1 ? '' : 's'}`;
 
   // Chats that need you first, then by recency.
@@ -69,9 +73,7 @@ function render() {
         <div class="row-title"></div>
         <div class="row-sub"></div>
       </div>
-      <div class="status-pill ${a.state}" style="--c:${s.color}">
-        <span class="status-dot"></span>${s.label}
-      </div>
+      ${statusPill(a.state, s.label, s.color)}
       <div class="agent-age" title="Time in this state">${age(a.since)}</div>`;
     const badge = row.querySelector('.agent-tool');
     badge.textContent = t.letter;
@@ -92,8 +94,8 @@ export default {
 
   setup(c) {
     ctx = c;
-    c.left.innerHTML = '<span class="status-dot"></span>';
-    c.right.innerHTML = '<span class="summary"></span>';
+    c.left.innerHTML = '<span class="status-dot"></span><span class="ear-icon"></span>';
+    c.right.innerHTML = '<span class="summary"></span><span class="summary-count"></span>';
     c.body.innerHTML = `
       <div class="list-head"><span>Agents</span><span class="list-count"></span></div>
       <div class="list-rows"></div>`;

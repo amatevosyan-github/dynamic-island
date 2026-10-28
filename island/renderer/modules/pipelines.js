@@ -1,5 +1,7 @@
 // Pipelines module: latest GitLab pipeline per project from the "pipelines" provider
 // ([{ id, project, account, ref, status, url?, error? }]). Hidden until GitLab is configured.
+import { STATUS_ICON, statusPill } from '../icons.js';
+
 const STATUS = {
   failed: { label: 'Failed', color: 'var(--err)', rank: 5 },
   error: { label: 'Error', color: 'var(--err)', rank: 4 },
@@ -21,14 +23,16 @@ function summary() {
   const worst = list.reduce((a, p) => (STATUS[p.status].rank > STATUS[a].rank ? p.status : a), 'success');
   const n = list.filter((p) => p.status === worst).length;
   const text = worst === 'success' || worst === 'canceled' ? 'All passed' : `${n} ${STATUS[worst].label.toLowerCase()}`;
-  return { color: STATUS[worst].color, text };
+  return { worst, n, color: STATUS[worst].color, text };
 }
 
 function render() {
-  const { color, text } = summary();
+  const { worst, n, color, text } = summary();
   ctx.left.style.setProperty('--c', color);
   ctx.right.style.setProperty('--c', color);
+  ctx.left.querySelector('.ear-icon').innerHTML = STATUS_ICON[worst];
   ctx.right.querySelector('.summary').textContent = text;
+  ctx.right.querySelector('.summary-count').textContent = n;
   countEl.textContent = `${list.length} project${list.length === 1 ? '' : 's'}`;
 
   // Broken and running first.
@@ -47,9 +51,7 @@ function render() {
         <div class="row-title"></div>
         <div class="row-sub"></div>
       </div>
-      <div class="status-pill ${p.status}" style="--c:${s.color}">
-        <span class="status-dot"></span>${s.label}
-      </div>`;
+      ${statusPill(p.status, s.label, s.color)}`;
     row.querySelector('.row-title').textContent = p.project;
     row.querySelector('.row-sub').textContent = [p.error || p.ref, p.account].filter(Boolean).join(' · ');
     return row;
@@ -65,8 +67,8 @@ export default {
 
   setup(c) {
     ctx = c;
-    c.left.innerHTML = '<span class="status-dot"></span>';
-    c.right.innerHTML = '<span class="summary"></span>';
+    c.left.innerHTML = '<span class="status-dot"></span><span class="ear-icon"></span>';
+    c.right.innerHTML = '<span class="summary"></span><span class="summary-count"></span>';
     c.body.innerHTML = `
       <div class="list-head"><span>Pipelines</span><span class="list-count"></span></div>
       <div class="list-rows"></div>`;

@@ -1,5 +1,5 @@
-// User settings in ~/.vistry-island/config.json. Edited by hand (GitLab) and from the
-// tray menu (toggles). A file that doesn't parse is never overwritten.
+// User settings in ~/.vistry-island/config.json. Edited from the island's settings panel
+// or by hand. A file that doesn't parse is never overwritten.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -7,19 +7,33 @@ const path = require('path');
 const DIR = path.join(os.homedir(), '.vistry-island');
 const FILE = path.join(DIR, 'config.json');
 
+const EDGES = ['top', 'bottom', 'left', 'right'];
+
 // "gitlab" is a list of accounts (one object is accepted too). Each account:
-//   { name?, url, token, projects: ["group/project" | { path, ref }], ref? }
+//   { id, name?, url, token | tokenEnc, projects: ["group/project" | { path, ref }], ref? }
+// tokenEnc is a token encrypted with the OS keystore (set from the settings panel);
+// a plain "token" typed into the file by hand works too.
 const GITLAB_ACCOUNT = { name: '', url: 'https://gitlab.com', token: '', projects: [], ref: '' };
 
 const DEFAULTS = {
   notifications: false,
   hideInFullscreen: true,
-  gitlab: [GITLAB_ACCOUNT],
+  // Screen edge the island sits on, and where along it (0..1); display is a screen id.
+  dock: { edge: 'top', offset: 0.5, display: null },
+  gitlab: [],
 };
 
 function merge(raw) {
-  const gitlab = raw.gitlab === undefined ? DEFAULTS.gitlab : [].concat(raw.gitlab || []);
-  return { ...DEFAULTS, ...raw, gitlab: gitlab.map((account) => ({ ...GITLAB_ACCOUNT, ...account })) };
+  const gitlab = [].concat(raw.gitlab || []).filter((a) => a && typeof a === 'object');
+  const dock = { ...DEFAULTS.dock, ...(raw.dock || {}) };
+  if (!EDGES.includes(dock.edge)) dock.edge = 'top';
+  dock.offset = Math.min(1, Math.max(0, Number(dock.offset) || 0.5));
+  return {
+    ...DEFAULTS,
+    ...raw,
+    dock,
+    gitlab: gitlab.map((account, i) => ({ ...GITLAB_ACCOUNT, id: `acct-${i + 1}`, ...account })),
+  };
 }
 
 // { config, error }: on a broken file, defaults plus the parse error.
@@ -48,4 +62,4 @@ function update(mutate) {
   return null;
 }
 
-module.exports = { DIR, FILE, load, ensure, update };
+module.exports = { DIR, FILE, EDGES, load, ensure, update };

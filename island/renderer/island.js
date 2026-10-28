@@ -1,28 +1,37 @@
 import modules from './modules/index.js';
+import { createSettings } from './settings.js';
 
+// Pill sizes per orientation: top/bottom docks are horizontal, left/right vertical.
 const SIZES = {
-  idle: { w: 120, h: 32, r: 16 },
-  compact: { w: 236, h: 36, r: 18 },
-  expanded: { w: 400, r: 36 },
+  horizontal: { idle: { w: 120, h: 32 }, compact: { w: 236, h: 36 }, expandedW: 400, settings: { w: 400, h: 470 } },
+  vertical: { idle: { w: 32, h: 120 }, compact: { w: 36, h: 180 }, expandedW: 340, settings: { w: 380, h: 470 } },
 };
+const EXPANDED_RADIUS = 34;
+const DOTS_H = 14; // part of a module's expandedHeight, given back when the dots are hidden
 const HOVER_INTENT_MS = 120;
 const COLLAPSE_DELAY_MS = 350;
 const ATTENTION_MS = 4000;
 const WHEEL_THROTTLE_MS = 300;
-const DOTS_H = 14;
+const DRAG_THRESHOLD = 6; // px before a press becomes a drag
 
 const island = document.getElementById('island');
 const compactLayer = document.getElementById('compact');
 const bodies = document.getElementById('bodies');
 const dots = document.getElementById('dots');
+const cluster = document.querySelector('.cluster');
+const gear = document.getElementById('gear');
 
 const views = [];
 let activeIndex = 0;      // module the user picked
 let attentionIndex = null; // module temporarily shown because it asked for attention
 let expanded = false;
 let hovered = false;
+let dragging = false;
+let edge = 'top';
 let expandTimer, collapseTimer, attentionTimer;
 let lastWheel = 0;
+
+const vertical = () => edge === 'left' || edge === 'right';
 
 function el(tag, className) {
   const node = document.createElement(tag);
@@ -52,6 +61,11 @@ modules.forEach((mod, i) => {
   mod.setup({ left, right, body, changed: (opts) => onModuleChanged(i, opts) });
 });
 
+const settings = createSettings(document.getElementById('settings'), {
+  onClose: () => closeSettings(),
+  onResize: () => render(),
+});
+
 function currentIndex() {
   if (attentionIndex !== null) return attentionIndex;
   if (views[activeIndex].mod.hasActivity()) return activeIndex;
@@ -63,27 +77,34 @@ function render() {
   if (views.length !== modules.length) return; // still in setup
   const idx = currentIndex();
   const view = views[idx];
-  const state = expanded ? 'expanded' : view.mod.hasActivity() ? 'compact' : 'idle';
-  const size = SIZES[state];
+  const sizes = SIZES[vertical() ? 'vertical' : 'horizontal'];
+  const open = settings.isOpen();
+  const state = open || expanded ? 'expanded' : view.mod.hasActivity() ? 'compact' : 'idle';
 
   // Dots only for modules that have something to show.
   let shown = 0;
   views.forEach((v, i) => {
     const on = i === idx;
     v.ears.hidden = !on;
-    v.body.hidden = !on;
+    v.body.hidden = !on || open;
     v.dot.classList.toggle('active', on);
     v.dot.hidden = !on && !v.mod.hasActivity();
     if (!v.dot.hidden) shown++;
   });
-  dots.hidden = shown < 2;
+  dots.hidden = shown < 2 || open;
 
-  // expandedHeight includes room for the dots; give it back when they're hidden.
-  const expandedH = (view.mod.expandedHeight ?? 160) - (dots.hidden ? DOTS_H : 0);
+  let w;
+  let h;
+  if (open) ({ w, h } = sizes.settings);
+  else if (state === 'expanded') [w, h] = [sizes.expandedW, (view.mod.expandedHeight ?? 160) - (dots.hidden ? DOTS_H : 0)];
+  else ({ w, h } = sizes[state]);
+
   island.dataset.state = state;
-  island.style.width = `${size.w}px`;
-  island.style.height = `${state === 'expanded' ? expandedH : size.h}px`;
-  island.style.borderRadius = `${size.r}px`;
+  cluster.classList.toggle('show-gear', state === 'expanded' && !open && !dragging);
+  island.style.setProperty('--xw', `${w}px`);
+  island.style.width = `${w}px`;
+  island.style.height = `${h}px`;
+  island.style.borderRadius = `${state === 'expanded' ? EXPANDED_RADIUS : Math.min(w, h) / 2}px`;
 }
 
 // Next module with activity in direction dir (±1), or the current one.
@@ -97,6 +118,7 @@ function step(dir) {
 }
 
 function setExpanded(value) {
+  if (dragging && value) return;
   if (expanded === value) return;
   expanded = value;
   if (expanded) clearAttention();
@@ -110,7 +132,7 @@ function activate(i) {
 }
 
 function onModuleChanged(i, opts = {}) {
-  if (opts.attention && !expanded && !hovered) {
+  if (opts.attention && !expanded && !hovered && !settings.isOpen()) {
     attentionIndex = i;
     clearTimeout(attentionTimer);
     attentionTimer = setTimeout(clearAttention, ATTENTION_MS);
@@ -130,21 +152,111 @@ function clearAttention() {
   render();
 }
 
-island.addEventListener('mouseenter', () => {
+function setDock(next) {
+  edge = next;
+  document.body.dataset.dock = edge;
+  document.body.classList.toggle('vertical', vertical());
+  render();
+}
+
+// ---------- settings ----------
+
+function openSettings() {
+  clearTimeout(collapseTimer);
+  window.island.setInteractive(true);
+  window.island.setFocusable(true);
+  expanded = true;
+  settings.open();
+  render();
+}
+
+function closeSettings() {
+  if (!settings.isOpen()) return;
+  settings.close();
+  window.island.setFocusable(false);
+  if (!hovered) {
+    expanded = false;
+    window.island.setInteractive(false);
+  }
+  render();
+}
+
+gear.addEventListener('click', (e) => {
+  e.stopPropagation();
+  openSettings();
+});
+
+window.island.onOpenSettings(openSettings);
+window.island.onBlur(closeSettings); // clicked into another app
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSettings();
+});
+
+// ---------- pointer: hover, click, drag ----------
+
+// The island and its settings button count as one hover area: crossing the gap between
+// them starts the collapse delay, and entering the other one cancels it.
+function hoverStart() {
   hovered = true;
   window.island.setInteractive(true);
   clearTimeout(collapseTimer);
-  expandTimer = setTimeout(() => setExpanded(true), HOVER_INTENT_MS);
+  if (!dragging && !expanded) expandTimer = setTimeout(() => setExpanded(true), HOVER_INTENT_MS);
+}
+
+function hoverEnd() {
+  if (dragging) return; // the window follows the cursor; don't drop mouse events mid-drag
+  hovered = false;
+  clearTimeout(expandTimer);
+  if (settings.isOpen()) return; // stays open (and focused) until closed
+  window.island.setInteractive(false);
+  collapseTimer = setTimeout(() => setExpanded(false), COLLAPSE_DELAY_MS);
+}
+
+for (const target of [island, gear]) {
+  target.addEventListener('mouseenter', hoverStart);
+  target.addEventListener('mouseleave', hoverEnd);
+}
+
+// A press on the pill (not on a control) becomes a drag once it moves a few pixels.
+let press = null;
+let suppressClick = false;
+const INTERACTIVE = 'button, input, textarea, select, a, label, .settings';
+
+island.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0 || e.target.closest(INTERACTIVE)) return;
+  press = { x: e.screenX, y: e.screenY, id: e.pointerId };
 });
 
-island.addEventListener('mouseleave', () => {
-  hovered = false;
-  window.island.setInteractive(false);
+island.addEventListener('pointermove', (e) => {
+  if (!press || dragging) return;
+  if (Math.hypot(e.screenX - press.x, e.screenY - press.y) < DRAG_THRESHOLD) return;
+  dragging = true;
+  island.setPointerCapture(press.id);
   clearTimeout(expandTimer);
-  collapseTimer = setTimeout(() => setExpanded(false), COLLAPSE_DELAY_MS);
+  expanded = false;
+  document.body.classList.add('dragging');
+  render();
+  window.island.drag(true);
 });
+
+function endPress() {
+  if (dragging) {
+    dragging = false;
+    suppressClick = true; // the click that ends a drag isn't a tap
+    document.body.classList.remove('dragging');
+    window.island.drag(false);
+  }
+  press = null;
+}
+island.addEventListener('pointerup', endPress);
+island.addEventListener('pointercancel', endPress);
+island.addEventListener('lostpointercapture', endPress);
 
 island.addEventListener('click', () => {
+  if (suppressClick) {
+    suppressClick = false;
+    return;
+  }
   clearTimeout(expandTimer);
   setExpanded(true);
 });
@@ -155,6 +267,7 @@ island.addEventListener('contextmenu', (e) => {
 });
 
 island.addEventListener('wheel', (e) => {
+  if (settings.isOpen()) return; // the panel scrolls
   const now = Date.now();
   if (now - lastWheel < WHEEL_THROTTLE_MS || views.length < 2) return;
   lastWheel = now;
@@ -167,5 +280,7 @@ window.island.onData(({ id, data }) => {
   const view = views.find((v) => v.mod.id === id);
   if (view && view.mod.onData) view.mod.onData(data);
 });
+
+window.island.onDock(({ edge: next }) => setDock(next));
 
 render();
