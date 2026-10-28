@@ -7,19 +7,19 @@ const path = require('path');
 const DIR = path.join(os.homedir(), '.vistry-island');
 const FILE = path.join(DIR, 'config.json');
 
+// "gitlab" is a list of accounts (one object is accepted too). Each account:
+//   { name?, url, token, projects: ["group/project" | { path, ref }], ref? }
+const GITLAB_ACCOUNT = { name: '', url: 'https://gitlab.com', token: '', projects: [], ref: '' };
+
 const DEFAULTS = {
   notifications: false,
   hideInFullscreen: true,
-  gitlab: {
-    url: 'https://gitlab.com',
-    token: '',
-    projects: [],
-    ref: '',
-  },
+  gitlab: [GITLAB_ACCOUNT],
 };
 
 function merge(raw) {
-  return { ...DEFAULTS, ...raw, gitlab: { ...DEFAULTS.gitlab, ...(raw.gitlab || {}) } };
+  const gitlab = raw.gitlab === undefined ? DEFAULTS.gitlab : [].concat(raw.gitlab || []);
+  return { ...DEFAULTS, ...raw, gitlab: gitlab.map((account) => ({ ...GITLAB_ACCOUNT, ...account })) };
 }
 
 // { config, error }: on a broken file, defaults plus the parse error.

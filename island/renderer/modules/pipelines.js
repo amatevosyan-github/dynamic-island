@@ -1,5 +1,5 @@
 // Pipelines module: latest GitLab pipeline per project from the "pipelines" provider
-// ([{ id, project, ref, status, url?, error? }]). Hidden until GitLab is configured.
+// ([{ id, project, account, ref, status, url?, error? }]). Hidden until GitLab is configured.
 const STATUS = {
   failed: { label: 'Failed', color: 'var(--err)', rank: 5 },
   error: { label: 'Error', color: 'var(--err)', rank: 4 },
@@ -51,7 +51,7 @@ function render() {
         <span class="status-dot"></span>${s.label}
       </div>`;
     row.querySelector('.row-title').textContent = p.project;
-    row.querySelector('.row-sub').textContent = p.error || p.ref;
+    row.querySelector('.row-sub').textContent = [p.error || p.ref, p.account].filter(Boolean).join(' · ');
     return row;
   }));
 }

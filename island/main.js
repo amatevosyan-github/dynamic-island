@@ -109,9 +109,13 @@ function startProviders() {
     const emit = (data) => {
       if (win && !win.isDestroyed()) win.webContents.send('island:data', { id: provider.id, data });
     };
-    const stop = provider.start(emit, ctx);
-    if (typeof stop === 'function') stopFns.push(stop);
-    if (provider.command) commandHandlers.set(provider.id, provider.command);
+    try {
+      const stop = provider.start(emit, ctx);
+      if (typeof stop === 'function') stopFns.push(stop);
+      if (provider.command) commandHandlers.set(provider.id, provider.command);
+    } catch (e) {
+      console.error(`provider ${provider.id} failed to start:`, e); // the others still run
+    }
   }
 }
 

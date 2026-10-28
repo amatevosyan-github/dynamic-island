@@ -61,23 +61,37 @@ presentations), the hooks, the settings file, and Quit.
 ### Settings and GitLab
 
 Settings live in `~/.vistry-island/config.json` (tray menu → **Open settings file**);
-the island picks up changes when you save. To show pipelines, fill in `gitlab`:
+the island picks up changes when you save. To show pipelines, fill in `gitlab`: a list
+of accounts, each with its own GitLab instance and token.
 
 ```json
 {
-  "gitlab": {
-    "url": "https://gitlab.com",
-    "token": "glpat-…",
-    "projects": ["my-group/web", "my-group/api"],
-    "ref": ""
-  }
+  "gitlab": [
+    {
+      "name": "work",
+      "url": "https://gitlab.example.com",
+      "token": "glpat-…",
+      "projects": ["team/web", { "path": "team/api", "ref": "main" }],
+      "ref": ""
+    },
+    {
+      "name": "personal",
+      "url": "https://gitlab.com",
+      "token": "glpat-…",
+      "projects": ["me/site"]
+    }
+  ]
 }
 ```
 
-- `token`: a personal or project access token with only the `read_api` scope. It is
-  stored in this file as plain text, so don't use a token with write access.
-- `projects`: full project paths as in the GitLab URL.
-- `ref`: a branch to follow; empty means the latest pipeline on any branch.
+- `token`: a personal, group or project access token with only the `read_api` scope.
+  It is stored in this file as plain text, so don't use a token with write access.
+- `projects`: full project paths as in the GitLab URL, or `{ "path", "ref" }` to follow
+  one branch of that project.
+- `ref`: a branch to follow for all of the account's projects; empty means the latest
+  pipeline on any branch.
+- `name`: shown next to the branch when there is more than one account.
+- A single account object instead of a list works too.
 
 Pipelines are checked every minute, and every 15 seconds while one is running.
 
