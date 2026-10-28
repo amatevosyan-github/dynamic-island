@@ -18,7 +18,7 @@ const island = document.getElementById('island');
 const compactLayer = document.getElementById('compact');
 const bodies = document.getElementById('bodies');
 const dots = document.getElementById('dots');
-const cluster = document.querySelector('.cluster');
+const satellites = document.getElementById('satellites');
 const gear = document.getElementById('gear');
 
 const views = [];
@@ -27,6 +27,7 @@ let attentionIndex = null; // module temporarily shown because it asked for atte
 let expanded = false;
 let hovered = false;
 let dragging = false;
+let holdZone = null; // area the expanded island covered before shrinking under the pointer
 let edge = 'top';
 let expandTimer, collapseTimer, attentionTimer;
 let lastWheel = 0;
@@ -57,8 +58,20 @@ modules.forEach((mod, i) => {
   });
   dots.append(dot);
 
-  views.push({ mod, ears, body, dot });
-  mod.setup({ left, right, body, changed: (opts) => onModuleChanged(i, opts) });
+  // A module's own round badge beside the island (e.g. the running timer); clicking it
+  // opens that module.
+  const satellite = el('button', 'satellite badge');
+  satellite.addEventListener('click', (e) => {
+    e.stopPropagation();
+    activate(i);
+    setExpanded(true);
+  });
+  satellite.addEventListener('mouseenter', hoverStart);
+  satellite.addEventListener('mouseleave', hoverEnd);
+  satellites.insertBefore(satellite, gear);
+
+  views.push({ mod, ears, body, dot, satellite });
+  mod.setup({ left, right, body, satellite, changed: (opts) => onModuleChanged(i, opts) });
 });
 
 const settings = createSettings(document.getElementById('settings'), {
@@ -66,11 +79,21 @@ const settings = createSettings(document.getElementById('settings'), {
   onResize: () => render(),
 });
 
+// Modules reachable from the dots: those with something to show, plus "alwaysListed"
+// ones (the timer) that are worth opening even when idle.
+const listed = (v) => v.mod.hasActivity() || !!v.mod.alwaysListed;
+
+// Collapsed, a module with "badgeWhenCollapsed" (the timer) lives in its badge and leaves
+// the pill to the other modules, unless none of them has anything to show.
+const badged = (v) => !expanded && !!v.mod.badgeWhenCollapsed;
+
 function currentIndex() {
   if (attentionIndex !== null) return attentionIndex;
-  if (views[activeIndex].mod.hasActivity()) return activeIndex;
-  const firstActive = views.findIndex((v) => v.mod.hasActivity());
-  return firstActive === -1 ? activeIndex : firstActive;
+  const picked = views[activeIndex];
+  if ((picked.mod.hasActivity() && !badged(picked)) || (expanded && listed(picked))) return activeIndex;
+  let first = views.findIndex((v) => v.mod.hasActivity() && !badged(v));
+  if (first === -1) first = views.findIndex((v) => v.mod.hasActivity());
+  return first === -1 ? activeIndex : first;
 }
 
 function render() {
@@ -81,15 +104,18 @@ function render() {
   const open = settings.isOpen();
   const state = open || expanded ? 'expanded' : view.mod.hasActivity() ? 'compact' : 'idle';
 
-  // Dots only for modules that have something to show.
+  // Dots for the listed modules; badges for modules that want one, unless that module
+  // is already what the island shows.
   let shown = 0;
   views.forEach((v, i) => {
     const on = i === idx;
     v.ears.hidden = !on;
     v.body.hidden = !on || open;
     v.dot.classList.toggle('active', on);
-    v.dot.hidden = !on && !v.mod.hasActivity();
+    v.dot.hidden = !on && !listed(v);
     if (!v.dot.hidden) shown++;
+    const showing = on && state !== 'idle';
+    v.satellite.classList.toggle('on', !!(v.mod.satelliteVisible && v.mod.satelliteVisible()) && !showing && !open && !dragging);
   });
   dots.hidden = shown < 2 || open;
 
@@ -99,20 +125,29 @@ function render() {
   else if (state === 'expanded') [w, h] = [sizes.expandedW, (view.mod.expandedHeight ?? 160) - (dots.hidden ? DOTS_H : 0)];
   else ({ w, h } = sizes[state]);
 
+  // Shrinking under the pointer (a shorter tab, fewer rows) must not read as "pointer left":
+  // remember the area it covered and keep the island open while the pointer stays there.
+  if (state === 'expanded' && (hovered || holdZone) && (w < island.offsetWidth || h < island.offsetHeight)) {
+    const r = island.getBoundingClientRect();
+    holdZone = holdZone
+      ? { left: Math.min(r.left, holdZone.left), top: Math.min(r.top, holdZone.top), right: Math.max(r.right, holdZone.right), bottom: Math.max(r.bottom, holdZone.bottom) }
+      : { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  }
+
   island.dataset.state = state;
-  cluster.classList.toggle('show-gear', state === 'expanded' && !open && !dragging);
+  gear.classList.toggle('on', state === 'expanded' && !open && !dragging);
   island.style.setProperty('--xw', `${w}px`);
   island.style.width = `${w}px`;
   island.style.height = `${h}px`;
   island.style.borderRadius = `${state === 'expanded' ? EXPANDED_RADIUS : Math.min(w, h) / 2}px`;
 }
 
-// Next module with activity in direction dir (±1), or the current one.
+// Next listed module in direction dir (±1), or the current one.
 function step(dir) {
   const from = currentIndex();
   for (let k = 1; k < views.length; k++) {
     const i = (from + dir * k + views.length * k) % views.length;
-    if (views[i].mod.hasActivity()) return i;
+    if (listed(views[i])) return i;
   }
   return from;
 }
@@ -122,6 +157,7 @@ function setExpanded(value) {
   if (expanded === value) return;
   expanded = value;
   if (expanded) clearAttention();
+  else holdZone = null;
   render();
 }
 
@@ -198,6 +234,7 @@ document.addEventListener('keydown', (e) => {
 // them starts the collapse delay, and entering the other one cancels it.
 function hoverStart() {
   hovered = true;
+  holdZone = null;
   window.island.setInteractive(true);
   clearTimeout(collapseTimer);
   if (!dragging && !expanded) expandTimer = setTimeout(() => setExpanded(true), HOVER_INTENT_MS);
@@ -208,6 +245,8 @@ function hoverEnd() {
   hovered = false;
   clearTimeout(expandTimer);
   if (settings.isOpen()) return; // stays open (and focused) until closed
+  if (holdZone && expanded) return; // the island shrank under the pointer: wait until it leaves the old area
+  holdZone = null;
   window.island.setInteractive(false);
   collapseTimer = setTimeout(() => setExpanded(false), COLLAPSE_DELAY_MS);
 }
@@ -217,10 +256,29 @@ for (const target of [island, gear]) {
   target.addEventListener('mouseleave', hoverEnd);
 }
 
+// While a hold zone is set the window still gets mouse moves; leaving the zone (or the
+// window) is what finally lets the island collapse.
+const HOLD_MARGIN = 8;
+document.addEventListener('mousemove', (e) => {
+  if (!holdZone || hovered) return;
+  const r = holdZone;
+  const inside = e.clientX >= r.left - HOLD_MARGIN && e.clientX <= r.right + HOLD_MARGIN
+    && e.clientY >= r.top - HOLD_MARGIN && e.clientY <= r.bottom + HOLD_MARGIN;
+  if (!inside) {
+    holdZone = null;
+    hoverEnd();
+  }
+});
+document.documentElement.addEventListener('mouseleave', () => {
+  if (!holdZone || hovered) return;
+  holdZone = null;
+  hoverEnd();
+});
+
 // A press on the pill (not on a control) becomes a drag once it moves a few pixels.
 let press = null;
 let suppressClick = false;
-const INTERACTIVE = 'button, input, textarea, select, a, label, .settings';
+const INTERACTIVE = 'button, input, textarea, select, a, label, .settings, .picker';
 
 island.addEventListener('pointerdown', (e) => {
   if (e.button !== 0 || e.target.closest(INTERACTIVE)) return;
@@ -267,7 +325,7 @@ island.addEventListener('contextmenu', (e) => {
 });
 
 island.addEventListener('wheel', (e) => {
-  if (settings.isOpen()) return; // the panel scrolls
+  if (settings.isOpen() || e.target.closest('.picker')) return; // the panel and the timer wheels scroll
   const now = Date.now();
   if (now - lastWheel < WHEEL_THROTTLE_MS || views.length < 2) return;
   lastWheel = now;

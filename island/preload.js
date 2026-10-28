@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('island', {
   showMenu: () => ipcRenderer.send('island:menu'),
   open: (url) => ipcRenderer.send('island:open', String(url)),
   quit: () => ipcRenderer.send('app:quit'),
+  // A notification the user asked for (the timer), shown even with notifications off.
+  notify: (title, body) => ipcRenderer.send('island:notify', { title: String(title), body: String(body) }),
   // Module -> its main-process provider (e.g. the agents row menu).
   command: (id, name, payload) => ipcRenderer.send('island:command', { id, name, payload }),
 

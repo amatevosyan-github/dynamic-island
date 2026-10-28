@@ -17,6 +17,7 @@ let win;
 let tray;
 let settings = config.load().config;
 let fullscreen = false;
+let panelOpen = false; // a panel with text fields is open: the window takes focus, never hides
 let drag = null; // { edge, timer } while the pill is being dragged
 let snapTimer;
 const stopFns = [];
@@ -94,7 +95,7 @@ function createWindow() {
 
 function updateVisibility() {
   if (!win || win.isDestroyed()) return;
-  if (fullscreen && settings.hideInFullscreen) win.hide();
+  if (fullscreen && settings.hideInFullscreen && !panelOpen) win.hide();
   else if (!win.isVisible()) win.showInactive();
 }
 
@@ -142,8 +143,9 @@ function openUrl(url) {
   }
 }
 
-function notify(title, body, url) {
-  if (!settings.notifications || !Notification.isSupported()) return;
+// `always`: something the user set up themselves (the timer), shown even with notifications off.
+function notify(title, body, url, always = false) {
+  if ((!settings.notifications && !always) || !Notification.isSupported()) return;
   const n = new Notification({ title, body });
   liveNotifications.add(n);
   n.on('click', () => url && openUrl(url));
@@ -361,14 +363,18 @@ ipcMain.on('island:interactive', (_e, interactive) => {
 // Text fields in the settings panel need keyboard focus; the island never takes it otherwise.
 ipcMain.on('island:focusable', (_e, focusable) => {
   if (!win) return;
-  win.setFocusable(!!focusable);
-  if (focusable) win.focus();
+  panelOpen = !!focusable;
+  win.setFocusable(panelOpen);
+  win.setSkipTaskbar(true); // on Windows setFocusable(true) also puts the window on the taskbar
+  if (panelOpen) win.focus();
+  updateVisibility();
 });
 
 ipcMain.on('island:drag', (_e, active) => (active ? startDrag() : endDrag()));
 ipcMain.on('island:open', (_e, url) => openUrl(url));
 ipcMain.on('island:menu', () => win && buildMenu().popup({ window: win }));
 ipcMain.on('app:quit', () => app.quit());
+ipcMain.on('island:notify', (_e, { title, body } = {}) => notify(String(title).slice(0, 100), String(body).slice(0, 200), null, true));
 
 ipcMain.on('island:command', (_e, { id, name, payload } = {}) => {
   const handler = commandHandlers.get(id);

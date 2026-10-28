@@ -201,13 +201,24 @@ body.vertical .expanded { padding: 16px 16px 24px; }
   display: flex;
 }
 
-/* Settings button: a small second island, beside the expanded one on the side away
-   from the docked edge (right of it on top/bottom docks, below it on side docks). */
-.satellite {
+/* Small round islands beside the main one, on the side away from the docked edge (right
+   of it on top/bottom docks, below it on side docks): module badges such as the running
+   timer, then the settings button while expanded. */
+.satellites {
   position: absolute;
   left: calc(100% + 8px);
   top: 0;
-  display: grid;
+  display: flex;
+  gap: 8px;
+}
+
+body[data-dock="bottom"] .satellites { top: auto; bottom: 0; }
+body[data-dock="left"] .satellites { left: 0; top: calc(100% + 8px); flex-direction: column; }
+body[data-dock="right"] .satellites { left: auto; right: 0; top: calc(100% + 8px); flex-direction: column; }
+
+.satellite {
+  position: relative;
+  display: none;
   place-items: center;
   width: 36px;
   height: 36px;
@@ -215,30 +226,24 @@ body.vertical .expanded { padding: 16px 16px 24px; }
   background: #000;
   color: var(--fg-2);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 10px 30px rgba(0, 0, 0, 0.35);
-  opacity: 0;
-  transform: scale(0.3);
-  pointer-events: none;
-  transition:
-    opacity 0.2s var(--ease),
-    transform 0.45s var(--spring),
-    color 0.15s var(--ease);
+  transition: color 0.15s var(--ease), transform 0.2s var(--ease);
 }
 
-.satellite svg { width: 16px; height: 16px; fill: currentColor; transition: transform 0.4s var(--spring); }
+.satellite.on {
+  display: grid;
+  animation: pop-in 0.45s var(--spring) both;
+}
+
+#gear.on { animation-delay: 0.1s; }
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.3); }
+}
+
+#gear svg { width: 16px; height: 16px; fill: currentColor; transition: transform 0.4s var(--spring); }
 .satellite:hover { color: var(--fg); }
-.satellite:hover svg { transform: rotate(45deg); }
+#gear:hover svg { transform: rotate(45deg); }
 .satellite:active { transform: scale(0.9); }
-
-.cluster.show-gear .satellite {
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
-  transition-delay: 0.12s;
-}
-
-body[data-dock="bottom"] .satellite { top: auto; bottom: 0; }
-body[data-dock="left"] .satellite { left: 0; top: calc(100% + 8px); }
-body[data-dock="right"] .satellite { left: auto; right: 0; top: calc(100% + 8px); }
 
 .dots {
   position: absolute;
@@ -507,22 +512,291 @@ body.vertical .status-pill .status-icon { display: block; }
   color: var(--fg-3);
 }
 
+/* ---------- timer module ---------- */
+
+.timer-ear {
+  display: grid;
+  place-items: center;
+  color: var(--c);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-glyph { width: 16px; height: 16px; }
+body.vertical .ear .timer-ear.time { display: none; }
+body.vertical .timer-ear .timer-glyph { width: 18px; height: 18px; }
+
+/* Duration wheels: three equal columns, each one scrolls anywhere inside it; the middle
+   row is the value. Rows tilt and fade away from it (curve() in timer.js). */
+.picker {
+  position: relative;
+  display: flex;
+  height: 150px;
+  margin-top: 4px;
+}
+
+.picker-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 60px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
+
+.wheel-col {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.wheel {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+}
+
+.wheel::-webkit-scrollbar { display: none; }
+
+.wheel-pad { height: 60px; }
+
+/* Digits end just left of the column's middle; the unit sits right of it. */
+.wheel-item {
+  height: 30px;
+  padding-right: calc(50% + 2px);
+  line-height: 30px;
+  text-align: right;
+  font-size: 21px;
+  font-variant-numeric: tabular-nums;
+  scroll-snap-align: center;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+.wheel-unit {
+  position: absolute;
+  left: calc(50% + 6px);
+  top: 60px;
+  line-height: 30px;
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.presets {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.presets button {
+  padding: 4px 9px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-2);
+  background: var(--fill);
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.presets button:hover { color: var(--fg); background: rgba(255, 255, 255, 0.2); }
+
+body.vertical .presets { flex-wrap: wrap; }
+
+/* Running: an orange ring drains around the time left. */
+.timer-run {
+  position: relative;
+  width: 172px;
+  height: 172px;
+  margin: 4px auto 0;
+}
+
+.timer-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.timer-ring circle { fill: none; stroke-width: 7; stroke-linecap: round; }
+.timer-ring .track { stroke: rgba(255, 159, 10, 0.18); }
+
+.timer-ring .progress {
+  stroke: #ff9f0a;
+  transition: stroke-dashoffset 0.25s linear;
+}
+
+.timer-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+
+.timer-time {
+  font-size: 34px;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+
+.timer-ends { font-size: 12px; color: var(--fg-3); }
+
+.timer-run.ringing .timer-time { color: #ff9f0a; animation: blink 1s ease-in-out infinite; }
+
+/* iOS timer buttons: round, tinted, with a thin ring around them. */
+/* Idle: a single wide Start. Started: it springs into a round Pause on the right while a
+   round Cancel grows in on the left. */
+.timer-buttons {
+  position: relative;
+  height: 62px;
+  margin: 16px 6px 0;
+}
+
+.round-btn {
+  position: absolute;
+  top: 0;
+  width: 62px;
+  height: 62px;
+  border-radius: 31px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--bc);
+  background: color-mix(in srgb, var(--bc) 22%, transparent);
+  box-shadow: 0 0 0 2px #000, 0 0 0 3.5px color-mix(in srgb, var(--bc) 30%, transparent);
+  transition:
+    width 0.5s var(--spring),
+    height 0.5s var(--spring),
+    top 0.5s var(--spring),
+    opacity 0.25s var(--ease),
+    transform 0.45s var(--spring),
+    background 0.15s var(--ease),
+    color 0.2s var(--ease);
+}
+
+.round-btn[data-act="left"] { left: 0; }
+.round-btn[data-act="right"] { right: 0; }
+
+.timer-buttons[data-phase="idle"] .round-btn[data-act="right"] {
+  top: 8px;
+  width: 100%;
+  height: 46px;
+}
+
+.timer-buttons[data-phase="idle"] .round-btn[data-act="left"] {
+  opacity: 0;
+  transform: scale(0.4);
+  pointer-events: none;
+}
+
+.round-btn:hover { background: color-mix(in srgb, var(--bc) 32%, transparent); }
+.round-btn:active { transform: scale(0.94); }
+.round-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+.round-btn.gray { --bc: #c7c7cc; }
+.round-btn.green { --bc: #32d74b; }
+.round-btn.orange { --bc: #ff9f0a; }
+.round-btn.red { --bc: #ff453a; }
+
+/* The badge beside the island while a timer runs. */
+/* The ring is the badge's own outline, so the digits get the whole inside. */
+.satellite.badge { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+.satellite.badge svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.satellite.badge circle { fill: none; stroke-width: 2; stroke-linecap: round; }
+.satellite.badge .track { stroke: rgba(255, 159, 10, 0.22); }
+.satellite.badge .progress { stroke: #ff9f0a; transition: stroke-dashoffset 0.25s linear; }
+
+.badge-time {
+  position: relative;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ff9f0a;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.4px;
+}
+
+.satellite.badge.long .badge-time { font-size: 9.5px; }
+.satellite.badge.ringing { animation: pop-in 0.45s var(--spring) both, ring-pulse 1s ease-in-out infinite 0.45s; }
+.satellite.badge.ringing .badge-time { font-size: 15px; }
+
+@keyframes ring-pulse {
+  50% { box-shadow: 0 0 0 1px rgba(255, 159, 10, 0.6), 0 0 18px rgba(255, 159, 10, 0.45); }
+}
+
 /* ---------- settings panel (iOS-style grouped list) ---------- */
 
 .settings {
   position: absolute;
   inset: 0;
+  animation: fade-in 0.3s var(--ease);
+}
+
+/* One page at a time: sections slide in from the right, "back" slides the root in from the left. */
+.page {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  padding: 14px 0 0;
-  animation: fade-in 0.3s var(--ease);
+  padding-top: 14px;
+  animation: page-in 0.38s var(--spring);
+}
+
+.page.from-left { animation-name: page-back; }
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateX(28px); }
+}
+
+@keyframes page-back {
+  from { opacity: 0; transform: translateX(-28px); }
 }
 
 .settings-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 28px;
   padding: 0 18px 10px;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 84px;
+  color: var(--run);
+  font-size: 13px;
+}
+
+.back-btn svg { width: 8px; height: 14px; }
+.back-btn:hover { color: #3395ff; }
+.head-spacer { width: 84px; }
+
+.cell.nav { gap: 10px; }
+.cell.nav:hover { background: rgba(255, 255, 255, 0.05); }
+
+.nav-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--t);
+}
+
+.nav-title { flex: 1; }
+.nav-value { color: var(--fg-3); font-size: 12px; }
+.chevron { width: 7px; height: 12px; color: var(--fg-3); }
+
+.group-note code {
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 10.5px;
+  color: var(--fg-2);
 }
 
 .settings-title { font-size: 15px; font-weight: 700; }

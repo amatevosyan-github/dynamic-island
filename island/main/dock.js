@@ -1,8 +1,8 @@
 // Geometry of the island on a screen edge. The window is a fixed transparent canvas big
 // enough for any expanded state; the renderer pins the pill to the edge side of it
 // (.stage in island.css), and the window is placed so the pill hugs the screen edge.
-// Wide enough for the 400px island centered with the settings button beside it.
-const WIN = { width: 520, height: 560 };
+// Wide enough for the 400px island centered with two round badges (timer, settings) beside it.
+const WIN = { width: 600, height: 560 };
 const PAD = 4; // .stage padding
 const THICK = 36; // compact pill thickness
 const GAP = 6; // pill distance from the screen edge

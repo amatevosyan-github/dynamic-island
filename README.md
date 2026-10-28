@@ -7,6 +7,7 @@ A Dynamic Island–style overlay pinned to the top center of the screen. It show
 - **Agents**: your Claude Code and Cursor chats and whether each is working, done or
   waiting for you. Clicking a Claude chat opens it in the Claude desktop app.
 - **Pipelines**: the latest GitLab pipeline of each project you list.
+- **Timer**: an iOS-style countdown.
 
 The island is built from modules, so other sources can be added next to these.
 
@@ -53,20 +54,31 @@ To remove them: `npm run remove-hooks`, or **Remove** under Agents in the settin
   bring up that workspace's window. Right-click a row to hide it until it changes.
 - Click a pipeline row to open it in GitLab.
 - When something finishes or asks you something, the island pulses for a moment.
-- Scroll over the island or click the dots to switch between modules that have data.
+- Scroll over the island or click the dots to switch between modules (those with data,
+  and the timer).
 - The time on a chat row is how long it has been in its current state.
+
+### Timer
+
+Scroll to the **Timer** tab, pick a duration on the hours / minutes / seconds wheels
+(or tap a preset) and press **Start**; **Pause**, **Resume** and **Cancel** work like on
+an iPhone. While it runs, a small round badge with the time left sits beside the island
+(collapsed, and also next to the settings button when another tab is open); click it to
+open the timer. When time is up it beeps, shows a Windows notification (even with
+notifications turned off) and the badge pulses until you press **Stop**, add a minute,
+or a minute passes. A running timer survives restarting the island.
 
 ### Settings
 
 The round **gear button** next to the expanded island (or a click on the tray icon)
-opens the settings inside the island:
+opens the settings inside the island, laid out like iOS Settings:
 
 - **General**: launch at startup; notifications (Windows toasts when a chat needs you
   or finishes, or a pipeline passes or fails; off by default); hide in full screen (on
   by default: videos, games, presentations).
 - **Position**: top, bottom, left or right edge (or just drag the island).
-- **Agents**: install or remove the Claude Code and Cursor hooks.
-- **GitLab**: accounts for the pipelines module (below).
+- **Agents ›**: install or remove the Claude Code and Cursor hooks.
+- **GitLab ›**: accounts for the pipelines module (below).
 
 Toggles apply right away; GitLab accounts save with **Save** or when the panel closes.
 Everything is stored in `~/.dynamic-island/config.json`, which you can also edit by hand;
