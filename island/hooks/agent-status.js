@@ -40,8 +40,24 @@ function read(file) {
   }
 }
 
-// Did the turn that just ended ask the user something? Reads the tail of the Claude
-// transcript back to the last real user prompt. Returns the question text or null.
+// Cursor keeps transcripts at ~/.cursor/projects/<slug>/agent-transcripts/<id>/<id>.jsonl.
+function cursorTranscript(session) {
+  const root = path.join(os.homedir(), '.cursor', 'projects');
+  const id = String(session).replace(/[^\w-]/g, '');
+  try {
+    for (const slug of fs.readdirSync(root)) {
+      const file = path.join(root, slug, 'agent-transcripts', id, `${id}.jsonl`);
+      if (fs.existsSync(file)) return file;
+    }
+  } catch {
+    // no Cursor projects folder
+  }
+  return null;
+}
+
+// Did the turn that just ended ask the user something? Reads the tail of a Claude or
+// Cursor transcript (JSONL; entries carry `type` or `role`) back to the last real user
+// prompt. Returns the question text or null.
 const TAIL_BYTES = 512 * 1024;
 
 function lastTurnQuestion(transcript) {
@@ -72,12 +88,13 @@ function lastTurnQuestion(transcript) {
     const e = entries[i];
     if (!e || !e.message) continue;
     const content = e.message.content;
-    if (e.type === 'user') {
+    const kind = e.type || e.role;
+    if (kind === 'user') {
       const isPrompt = typeof content === 'string' || (Array.isArray(content) && content.some((c) => c.type === 'text'));
       if (isPrompt) break;
       continue;
     }
-    if (e.type !== 'assistant' || !Array.isArray(content)) continue;
+    if (kind !== 'assistant' || !Array.isArray(content)) continue;
     for (const c of content) {
       // Desktop app: the turn's question goes into the next-step box.
       if (c.type === 'tool_use' && /wrap_up$/.test(c.name) && c.input && c.input.ask) return String(c.input.ask);
@@ -102,6 +119,9 @@ function isIdleNotice(p) {
 function run(p) {
   const session = p.session_id || p.conversation_id;
   if (!tool || !session) return;
+  // Cursor also runs the hooks from ~/.claude/settings.json; its own hooks.json
+  // already reports the chat, so drop the Claude-flavoured duplicate.
+  if (tool === 'claude' && (p.conversation_id || p.workspace_roots || p.cursor_version)) return;
 
   const file = path.join(DIR, `${tool}-${String(session).replace(/[^\w-]/g, '')}.json`);
   if (event === 'end') return fs.rmSync(file, { force: true });
@@ -121,8 +141,9 @@ function run(p) {
   if (event === 'done' && p.status === 'error') state = 'error';
 
   let message = event === 'notify' ? p.message : undefined;
-  if (event === 'done' && tool === 'claude') {
-    const question = lastTurnQuestion(p.transcript_path);
+  if (event === 'done' && state === 'done') {
+    const transcript = p.transcript_path || (tool === 'cursor' ? cursorTranscript(session) : null);
+    const question = lastTurnQuestion(transcript);
     if (question) {
       state = 'waiting';
       message = question;
